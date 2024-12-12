@@ -9,59 +9,87 @@ def parse_json(file):
     file_opened = open(file, 'r', encoding='utf-8')
     return json.load(file_opened)
 
-# превращаем в числа
-def convert_to_numbers(raw_array:list):
-    numbers_array = []
-    for x in user_input:
-        if x in numbers.keys():
-            numbers_array.append(numbers[x])
-        elif x in operators.keys():
-            numbers_array.append(operators[x])
+parsed_numbers = parse_json(numbers_path)
+parsed_operators = parse_json(operators_path)
 
-    print(*numbers_array)
-    return numbers_array
+def slice_string(string: str):
+    string = string.split(sep=" ")
+    sliced = []
 
-# режем на числа
-def slice_arr(numbers_array):
-    sliced_number_array = []
-    pre_x_idx = 0
-    x_idx = 0
-    for x in numbers_array:
-        if x in operators.values():
-            sliced_number_array.append(numbers_array[pre_x_idx:x_idx])
-            sliced_number_array.append([numbers_array[x_idx]])
-            pre_x_idx = x_idx+1
-        x_idx += 1 
-    sliced_number_array.append([numbers_array[x_idx-1]])
-    print(sliced_number_array)
-    return sliced_number_array
+    start = 0
+    end = 0
+    for part in string:
+        if part in parsed_operators:
+            sliced.append(string[start:end])
+            start = end
+            start += 1
+            sliced.append([string[end]])
+        end += 1
 
-     
+    sliced.append(string[end-1:])
+    return sliced
 
-# парсинг чисел и операторов
-numbers = parse_json(numbers_path)
-operators = parse_json(operators_path)
 
-# отладка
-# print(numbers)
+def numirise(nums_list:list):
+    # print(nums_list)
 
-# ввод и форматрование
-user_input = input().split(sep=" ")
-print(*user_input)
-
-# превращаем в числа
-numbers_array = convert_to_numbers(user_input)
-
-# резняяяяяяяяя
-sliced = slice_arr(numbers_array)
-print(sliced)
-
-for x in sliced:
-    current_number = []
-    for num in range(0, len(x)-1, 1):
-        if x[num] < x[num+1]:
-            current_number.append(x[num] * x[num+1])
+    for big_number in range(0, len(nums_list)):
+        if nums_list[big_number][0] not in parsed_operators.keys():
+            for small_number in range(0, len(nums_list[big_number])):
+                for number in parsed_numbers.keys():
+                    if nums_list[big_number][small_number].find(number) != -1 and abs(len(nums_list[big_number][small_number]) - len(number)) <= 2:
+                        nums_list[big_number][small_number] = parsed_numbers[number]
+                        break
         else:
-            current_number.append(x[num])
+            nums_list[big_number] = [parsed_operators[nums_list[big_number][0]]]
+
+    return nums_list
+
+
+def realise(numbers_list:list):
+    outlist = []
     
-print(current_number)
+    def real_numerisation(number:list):
+        # print(number)
+        real_num = 0
+        max_id = number.index(max(number))
+        for x in number[:max_id]:
+            real_num += x
+        if real_num == 0:
+            real_num += 1
+        real_num *= number[max_id]
+
+
+        # print(real_num)
+        try:
+            if len(number[max_id+1:]) > 1:
+                return real_num + real_numerisation(number[max_id+1:])
+            else:
+                return real_num + number[max_id+1]
+
+        except:
+            return real_num        
+    for big_number in numbers_list:
+        if big_number[0] in parsed_operators:
+            outlist.append(big_number[0])
+        else:
+            if len(big_number) > 1:
+                outlist.append(real_numerisation(big_number))
+            else:
+                outlist.append(big_number[0])
+
+    return outlist
+
+
+                
+
+user_input = input()
+
+sliced = slice_string(user_input)
+# print(*sliced)
+
+numirised = numirise(sliced)
+# print(*numirised)
+
+realised = realise(numirised)
+print(*realised, end=" ")
