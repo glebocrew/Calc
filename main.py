@@ -16,7 +16,7 @@ def slice_string(string: str):
     string = string.split(sep=" ")
     sliced = []
 
-    print(string)
+    # print(string)
 
     start = 0
     end = 0
@@ -87,9 +87,9 @@ def realise(numbers_list:list):
 while True:
     user_input = input()
     sliced = slice_string(user_input)
-    print(*sliced)
+    # print(*sliced)
     numirised = numirise(sliced)
-    print(*numirised)
+    # print(*numirised)
     realised = realise(numirised)
     print(*realised, "=", end=" ")
     query = ""
