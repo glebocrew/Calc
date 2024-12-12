@@ -1,5 +1,8 @@
 # импортируем модуль 
 import json
+from colorama import Fore, Back, Style
+
+
 
 numbers_path = "numbers.json"
 operators_path = "operators.json"
@@ -81,18 +84,72 @@ def realise(numbers_list:list):
 
     return outlist
 
+def signal_handler(signum, frame):
+    raise RuntimeError("Слишком Долго!")
 
-                
+commands_dictionary = {
+    "/cmd": "показать допустимые команды",
+    "/help": "показать допустимые значения и операторы",
+    "/end": "закончить выполнение программы"
+}
 
-while True:
-    user_input = input()
-    sliced = slice_string(user_input)
-    # print(*sliced)
-    numirised = numirise(sliced)
-    # print(*numirised)
-    realised = realise(numirised)
-    print(*realised, "=", end=" ")
-    query = ""
-    for element_of_str in realised:
-        query += str(element_of_str)
-    exec(f"print({query})")
+commands_dictionary_actions = {
+    "/cmd": "cmds()",
+    "/help": "help()",
+    "/end": "loop = False"
+}
+
+commands = []
+for cmd in commands_dictionary.keys():
+    commands.append(cmd)
+
+def cmds():
+    for cmd_key, cmd_val in commands_dictionary.items():
+        print(f"{Fore.CYAN}{cmd_key}{Style.RESET_ALL} - {Fore.BLUE}{cmd_val}{Style.RESET_ALL}")
+    
+def help():
+    print(f"\n{Back.MAGENTA}ДОПУСТИМЫЕ ЧИСЛА{Style.RESET_ALL}\n")
+    for number in parsed_numbers.keys():
+        print(number)
+    print(f"\n{Back.MAGENTA}ДОПУСТИМЫЕ ОПЕРАЦИИ{Style.RESET_ALL}\n")
+    for operation in parsed_operators.keys():
+        print(operation)
+
+print(
+f'''Здравствуйте!
+Вы используете тестовый калькулятор {Fore.GREEN}GCalc (Glebocrew Pakostin Corporation){Style.RESET_ALL}
+Начните писать свои примеры после данного сообщения в окне ввода.
+Если вы хотите ознакомиться с допустимыми специальными командами приложения напишите /cmd
+Если вы хотите ознакомиться с допустимыми числами и операторами напишите команду /help'''
+)
+
+ERROR_MSG = f"{Fore.RED}{Back.LIGHTYELLOW_EX}Runtime Error: {Style.RESET_ALL}{Fore.RED}Что-то пошло не так. Скорее всего вы ввели такое число, которое интерпретатор не позволяет посчитать из за большого размера.{Style.RESET_ALL}"
+USER_ERROR_MSG = f"{Fore.RED}{Back.LIGHTYELLOW_EX}User Query Error: {Style.RESET_ALL}{Fore.RED}К сожалению, вы ввели неправильный формат входных данных. Попробуйте ещё раз. Чтобы ознакомится с допустимыми значениями ввода напишите {Fore.MAGENTA}/help{Style.RESET_ALL}"
+
+loop = True
+while loop:
+    user_input = input(f">>>{Fore.LIGHTCYAN_EX}")
+    print(f"{Style.RESET_ALL}", end="")
+    if user_input.lower() in commands:
+        exec(commands_dictionary_actions[user_input.lower()])
+    else:
+
+        sliced = slice_string(user_input)
+        # print(*sliced)
+        numirised = numirise(sliced)
+        # print(*numirised)
+        # print(numirised)
+
+        try:
+            realised = realise(numirised)
+            print(*realised, "=", end=" ")
+            query = ""
+            for element_of_str in realised:
+                query += str(element_of_str)                
+            exec(f"print({query})")
+        except NameError:
+            print(USER_ERROR_MSG)
+        except TypeError:
+            print(USER_ERROR_MSG)
+        except RuntimeError:
+            print(ERROR_MSG)
