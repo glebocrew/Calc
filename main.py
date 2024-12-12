@@ -16,17 +16,18 @@ def slice_string(string: str):
     string = string.split(sep=" ")
     sliced = []
 
+    print(string)
+
     start = 0
     end = 0
     for part in string:
-        if part in parsed_operators:
+        if part in parsed_operators.keys():
             sliced.append(string[start:end])
-            start = end
-            start += 1
+            start = end + 1
             sliced.append([string[end]])
         end += 1
 
-    sliced.append(string[end-1:])
+    sliced.append(string[start:])
     return sliced
 
 
@@ -37,7 +38,7 @@ def numirise(nums_list:list):
         if nums_list[big_number][0] not in parsed_operators.keys():
             for small_number in range(0, len(nums_list[big_number])):
                 for number in parsed_numbers.keys():
-                    if nums_list[big_number][small_number].find(number) != -1 and abs(len(nums_list[big_number][small_number]) - len(number)) <= 2:
+                    if nums_list[big_number][small_number].find(number) != -1 and abs(len(nums_list[big_number][small_number]) - len(number)) <= 2 and number[0] == nums_list[big_number][small_number][0]:
                         nums_list[big_number][small_number] = parsed_numbers[number]
                         break
         else:
@@ -83,13 +84,15 @@ def realise(numbers_list:list):
 
                 
 
-user_input = input()
-
-sliced = slice_string(user_input)
-# print(*sliced)
-
-numirised = numirise(sliced)
-# print(*numirised)
-
-realised = realise(numirised)
-print(*realised, end=" ")
+while True:
+    user_input = input()
+    sliced = slice_string(user_input)
+    print(*sliced)
+    numirised = numirise(sliced)
+    print(*numirised)
+    realised = realise(numirised)
+    print(*realised, "=", end=" ")
+    query = ""
+    for element_of_str in realised:
+        query += str(element_of_str)
+    exec(f"print({query})")
