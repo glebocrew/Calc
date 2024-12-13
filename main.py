@@ -1,128 +1,407 @@
-# импортируем модуль 
+# импортируем модуль json для парсинга json файла
 import json
+# импортируем из модуля colorama объекты Fore, Back и Style
+# для красивого и понятного вывода в терминал 
+# Fore - отвечает за то, как будут отображаться буквы
+# Back - отвечает за задний фон выводов
+# Style.RESET_ALL - чистит все стили консольного вывода
 from colorama import Fore, Back, Style
 
 
-
+# инициализируем переменные путей на словари всех чисел и операторов
+# в numbers_path:
+#   информация хранится в фотмате "число": 3на4ение (н/р "десять": 10)
+# в operators_path:
+#   информация хранится в формате "оператор": "перевод в python" (н/р "степень":"**") 
+# оба словаря масштабируемы и обладают всеми функциями, описанными в тз
+# оба словаря содержат дополнительные трактовки для различных диалектов
+# например "поделить" "разделить" "делить" обладают смыслом "/"
+# например "нуль" "ноль" обладают трактовкой 0
+# например "двенадцать" "дюжина" значат 12
+# подробнее вы можете почитать в данных файлах
 numbers_path = "numbers.json"
 operators_path = "operators.json"
 
-# парсим файл
-def parse_json(file):
+# функция для парсинга json файла
+def parse_json(file:str):
+    """
+    parse_json - функция для парсинга json файла
+    file аргумент file - должен быть строкой - путем к файлу, который требуется парсить.
+    ----
+    file должен указывать строго на json файл
+    ----
+    данная функция возвращает список из json файла
+    """
+
+    # открываем файл и возвращаем в переменную file_opened файловый объект
+    # также, мы считывем файл с кодировкой utf-8 так как сам файл содержит русские символы
     file_opened = open(file, 'r', encoding='utf-8')
+
+    # возвращаем словарь с ключами и значеиями из json файла
     return json.load(file_opened)
 
+# парсим файлы с помощью parse_json()
 parsed_numbers = parse_json(numbers_path)
 parsed_operators = parse_json(operators_path)
 
+# функция slice_string делит строку из аргументов сначала по пробелам
+# потом по операторам (так как числом можно считать какое либо выражение их слов до оператора)
+# разделять строку мы будем методом срезов, для того чтобы получить массив вида
+#
+#             "num ... num operator num ... num ..."
+#                              ↓
+#     ["num", ... ,"num", "operator", "num", ..., "num", ...]
+#                              ↓
+# [["num", ... , "num"], ["operator"], ["num", ..., "num"], ...]
 def slice_string(string: str):
+    """
+    функция slice_string делит строку из аргументов на двумерный список по операторам
+    аргумент string - это строка, которую требуется разделить
+    ----
+    т.е. число - это срез от предыдущего найденного оператора до нового найденного оператора
+    формульно выражаясь, string.split(sep=" ")[operator_before:operator_current]
+    ----
+    данная функция возвращает двоичный список в формате [["num", "num"], ["operator"], ["num"]]
+    """
+    # делим строку функцией split() с разделителем(сепаратором) пробел
+    # перезаписываем в string полученный список
     string = string.split(sep=" ")
+
+    # инициализируем переменную, которая в будущем станет двумерным списком
+    # (см. комментарий до функции)
     sliced = []
 
+    # это функция для отладки. разкомментировать по мере непредвиденной программой ошибке
     # print(string)
 
-    start = 0
-    end = 0
-    for part in string:
-        if part in parsed_operators.keys():
-            sliced.append(string[start:end])
-            start = end + 1
-            sliced.append([string[end]])
-        end += 1
+    # общая идея работы алгоритма:
+    #
+    # start, end - отображают предыдущий найденный оператор и текущий найденный оператор соответсвенно
+    #
+    # string = ["num", "num", "operator", "num"] sliced = []
+    #             ^
+    #        start, end
+    # string = ["num", "num", "operator", "num"] sliced = []
+    #             ^      ^
+    #           start   end
+    # string = ["num", "num", "operator", "num"] sliced = []
+    #             ^               ^
+    #           start            end
+    #
+    # ! OPERATOR НАЙДЕН
+    # sliced push [start:end] (все численные значение от start до end)
+    # sliced push [end] (сам оператор в формате ["operator"])
+    #
+    # string = ["num", "num", "operator", "num"] sliced = [["num", "num"], ["operator"]]
+    #                                       ^
+    #                                  start, end
+    #
+    # ! END OF LIST
+    # sliced push [start:end] (все численные значение от start до end)
+    # нет оператора, поэтому не добавляем [end]
 
+    # string = ["num", "num", "operator", "num"] sliced = [["num", "num"], ["operator"], ["num"]]
+    #                                       ^
+    #                                  start, end
+
+    # ИТОГ: получился двумерный список, разделённый по числам и операторам, с которым теперь можно работать
+    # sliced = [["num", "num"], ["operator"], ["num"]]
+
+    # создаем переменные start и end они хранят в себе предыдущий и текущий разделитель соответственно
+    start, end = 0, 0
+
+    # начинаем идти по списку string записывая значения в итератор part
+    for part in string:
+        # проверяем на то, что текущий элемент string является оператором
+        # (принадлежит списку parsed_operators.keys() - всех ключей всех существующих операторов)
+        if part in parsed_operators.keys():
+            # добавляем в sliced срез(список) значений от start до end
+            sliced.append(string[start:end])
+            # присваиваем переменной start значение end+1
+            # поскольку данная переменная включается в срез
+            # и мы хотим избежать дублирования оператора и его попадания в число
+            start = end + 1
+            # исходя из особенностей конструкции срезов :
+            # срез [start:end] значит что в срезе будут элементы
+            # [start, start + 1, start + 2, ..., end-2, end-1]
+            # добавляем наш оператор под индексом end
+            sliced.append([string[end]])
+        # если end - это число, то инкрементируем его
+        end += 1
+    
+    # когда цикл окончен, мы добавляем то, что осталось после последнего оператора
     sliced.append(string[start:])
+
+    # возвращаем двумерный список в формате [["num", ... ,"num"], ["operator"], ["num", ... ,"num"], ...]
     return sliced
 
 
+# "нумеризируем" наши числа
+# функция numirise нужна для того, чтобы превратить str в int
+# функция решает сразу несколько проблем
+#   1. перевод str -> int
+#   2. обработчик отрицальных чисел
 def numirise(nums_list:list):
+    """
+    функция numirise преобразует все возможные строковые числа в настоящие int-овые числа
+    аргумент nums_list - это список который нужно преобразовать в цифры
+    ----
+    возвращает nums_list, но с цифрами int вместо str
+    """
+    # это функция для отладки. разкомментировать по мере непредвиденной программой ошибке
     # print(nums_list)
 
-    for big_number in range(0, len(nums_list)):
-        try:
-            if nums_list[big_number][0] not in parsed_operators.keys():
-                for small_number in range(0, len(nums_list[big_number])):
-                    for number in parsed_numbers.keys():
-                        if nums_list[big_number][small_number].find(number) != -1 and abs(len(nums_list[big_number][small_number]) - len(number)) <= 2 and number[0] == nums_list[big_number][small_number][0]:
-                            nums_list[big_number][small_number] = parsed_numbers[number]
-                            break
+    # общая идея работы алгоритма:
+    # nums_list = [["num", "num"], ["operator"], ["num"]]
+    #                     ↓
+    # nums_list = [[num:int, num:int], ["operator_value"], [num:int]]
 
+    # например
+    # nums_list = [["пятьдесят", "два"], ["плюс"], ["пять"]]
+    # nums_list = [[50, 2], ["+"], [5]]
+
+
+    # начинаем цикл, в котором проходим по всем индексам nums_list
+    # nums_list[big_number] хранит в себе список типа ["num", "num", ...] или ["operator"]
+    # это крайне сильно поможет нам в дальнейшем
+    for big_number in range(0, len(nums_list)):
+        # обрабатываем исключение, если у нас есть отрицательное число
+        # (если после оператора идет оператор)
+        # например [["три"], ["плюс"], ["минус"], ["один"]]
+        # как мы видим, в таком случае, стоит обнулять элемент, на котором мы находимся сейчас
+        try:
+            # проверяем на то, что значение данного списка под индексом 0
+            # не является ключом оператором, т.е. мы можем смело преобразовать в число
+            if nums_list[big_number][0] not in parsed_operators.keys():
+                # идем по индексам всего подмассива big_number
+                for small_number in range(0, len(nums_list[big_number])):
+                    # идем по всем допустимым значениям чисел
+                    for number in parsed_numbers.keys():
+                        # данное условие задаёт строгую проверку, можно ли преобразовать число
+                        # условия и примеры
+                        #
+                        #   a. мы можем найти подстроку number в нашем элементе
+                        #       например "миллионов" будет иметь подстроку "миллион" и считаться одним числом
+                        #       т.е. "миллионов" "миллиона" "миллион" будут одним числом
+                        #
+                        #   b. модуль разности длин строк отличаются не более чем на 2
+                        #       например "восемь" и "восемьсот" отличаются на 3 символа
+                        #       однако, всегда когда модуль разницы длин <= 2 значит что это именно
+                        #       то число, которое нужно, так как есть только окончания миллион(а)(ов) или тысяч(а)
+                        # 
+                        #   c. слова начинаются с одной буквы
+                        #       наприрмер "семьдесят" и "восемьдесят"
+                        #       по критериям a и b они подходят (abs(len-len) = 2 и find != -1),
+                        #       однако, это не одно и то же для этого создана проверка, которая 
+                        #       проверяет совпадение первых букв
+                        if nums_list[big_number][small_number].find(number) != -1 and \
+                            abs(len(nums_list[big_number][small_number]) - len(number)) <= 2 and \
+                                number[0] == nums_list[big_number][small_number][0]:
+                            # заменяем строковое число численным (из словаря parsed_numbers)
+                            nums_list[big_number][small_number] = parsed_numbers[number]
+                            # завершает цикл (не имеет смысла идти дальше)
+                            break
+            # если значение ячейки 0 принадлежит множеству допустимых операторах
             else:
+                # перезаписываем python-расшифровку оператора
                 nums_list[big_number] = [parsed_operators[nums_list[big_number][0]]]
+        # обработчик исключения для отрицательных чисел
         except IndexError:
+            # обнуляем ячейку
             nums_list[big_number] = [""]
 
+    # возвращаем тот же список, но с цифровыми значениями и python-расшифровками операторов
     return nums_list
 
 
+# "реализуем" наши числа
+# функция realise нужна для того чтобы представить наш nums_list как реальные числа 
+# далее описании функции и ее комментариях
 def realise(numbers_list:list):
+    """
+    функция realise преобразует все разряды int-ов в одно число по правилам математики 
+    аргумент numbers_list - это список который нужно преобразовать в настоящие числа
+    ----
+    возвращает outlist, но с настоящими цифрами
+    """
+    # инициализируем список outlist
     outlist = []
+
+    # алгоритм realise просто проходится по элементам и 
+    #   записывает оператор, если 0 элемент текущего подсписка принадлежит множеству операторов
+    #   записывает int-вое число, если длина текущего подсписка <= 1
+    #   использует алгоритм real_numerisation для получения настоящего числа, как его представляет математика
+
+
+    # общая идея работы алгоритма real_numerisation:
+    # nums_list = [[num_1, num_2, num_3, num_4, num_5 ... num_n], [operator], [num, num, num, num, num]]
+    # outlist = []
+    # 
+    # рассмотрим для nums_list[0]
+    # [num, num, num, num, num, num]
+    # по определению числа, в данном случае гарантированно, что разряды убывают в любом элементе
+    # 
+    # recursion{
+    # find_max: -> num_3
+    # [num_1, num_2, num_3, num_4, num_5 ... num_n]
+    # }
+    #                  ^
+    #
+    # real_num = (num_1 + num_2) * num_3 +  recursion(num_4)
+    # 
+    # например:
+    # "двадцать пять миллионов семьсот восемьдесят пять тысяч сто девяносто пять"
+    #
+    # nums_list[0] = [20, 5, 1000000, 700, 80, 5, 1000, 100, 90, 5]
+    # [20, 5, 1000000, 700, 80, 5, 1000, 100, 90, 5]
+    # real_num = ((20 + 5) * 1000000) + ((700 + 80 + 5) * 1000) + (100 + 90 + 5)
+    #
+    # объяснение:
+    # данный алгоритм подразумевает под собой рекурсивное выполнение функции, которая
+    # ищет максимум и находит конкретный разряд в числе, те
+    # [20, 5, 1000000, 700, 80, 5, 1000, 100, 90, 5]
+    #            ^
+    # [25000000, 700, 80, 5, 1000, 100, 90, 5]
+    #                          ^
+    # [25000000, 785000, 100, 90, 5]
+    #                     ^
+    # [25785000, 195]
+    #        +
+    #   [25785195]
+    #   
+    # Ура! У нас есть итоговое число! Осталось "всего-то" реализовать
     
+
+    # создаем функцию, которая принимает number - список того, что мы будем исследовать
+    # (то, из чего будем составлять число)
     def real_numerisation(number:list):
+        """
+        функция real_numerisation - это рекурсивная функция, которая умножает сумму элементов до макс.
+        элементов и складывает получившееся число с real_numerisation(последующих чисел)
+        аргумент number - это список который будем преобразовать в обычное число
+        ----
+        возвращает real_num - число в стандартном понимании
+        """
+        # это функция для отладки. разкомментировать по мере непредвиденной программой ошибке
         # print(number)
+
+        # инициализируем real_num, в который будем хранить значение числа в стандартном представлении
         real_num = 0
+
+        # находим индекс максимального элемента 
+        # (func: Σ(чисел до него) * max + func(Σ(чисел после него))
         max_id = number.index(max(number))
+
+        # идем по списку [0, 1, 2, ... ,max_id-1]
         for x in number[:max_id]:
+            # прибавляем к real_num x (Σ(чисел до него))
             real_num += x
+        # обрабатывает такой исход, когда max_id == 0
+        # например
+        # два миллиона 
+        # так то real_num должен быть 0,
+        # но потом, 0 * 1000000 = 0
+        # а это неправильно, поэтому умножаем на 1 для сохранения чисел
         if real_num == 0:
+            # инкрементируем real_num
             real_num += 1
+        # в любом исходе умножаем на элемент max_id
         real_num *= number[max_id]
 
-
+        # это функция для отладки. разкомментировать по мере непредвиденной программой ошибке
         # print(real_num)
+
+        # смотрим, возможно ли сделать ещё одну рекурсию
+        # (есть ли ещё элементы)
         try:
+            # если длина среза оставшихся элементов > 1, делаем ещё круг рекурсии
             if len(number[max_id+1:]) > 1:
+                # формульно func: Σ(чисел до него) * max + func(Σ(чисел после него))
                 return real_num + real_numerisation(number[max_id+1:])
             else:
+                # формульно func: Σ(чисел до него) * max + last_number)
                 return real_num + number[max_id+1]
-
+        # если это конец и больше нет элементов
         except:
+            # возвращаем настоящее число
             return real_num     
         
+
+    # проходим по всем элементам numbers_list
+    # big_number - список int-ов / оператор
     for big_number in numbers_list:
+        # если big_number[0] - один из итераторов
+        # оставляем его как есть (добавляем в outlist)
         if big_number[0] in parsed_operators:
             outlist.append(big_number[0])
+        # если big_number[0] - число
         else:
+            # если big_number > 1 (нужно считать по разрядам)
             if len(big_number) > 1:
+                # вызываем рекурсивную функцию
                 outlist.append(real_numerisation(big_number))
+            # если  big_number == 1, то просто добавляем его
             else:
                 outlist.append(big_number[0])
 
+    # возвращаем итоговый список с int-ами
     return outlist
 
-def signal_handler(signum, frame):
-    raise RuntimeError("Слишком Долго!")
-
+# команды и их значения
 commands_dictionary = {
     "/cmd": "показать допустимые команды",
     "/help": "показать допустимые значения и операторы",
     "/end": "закончить выполнение программы"
 }
 
+# команды и их трактовка на python
+# далее, мы применяем exec() к commands_dictionary_actions[command]
 commands_dictionary_actions = {
     "/cmd": "cmds()",
     "/help": "help()",
     "/end": "loop = False"
 }
 
+# инициализируем список допустимых команд
 commands = []
+# проходим по всем допустимым командам
 for cmd in commands_dictionary.keys():
+    # добавляем команду в список
     commands.append(cmd)
 
+# cmds - метод, выводящий все функции которые у нас есть и что они делают
 def cmds():
+    """
+    выводит в консоль все допустимые команды приложения
+    """
+    # проходим по всем элементам commands_dictionary
     for cmd_key, cmd_val in commands_dictionary.items():
+        # выводим в формате команда - действие команды
         print(f"{Fore.CYAN}{cmd_key}{Style.RESET_ALL} - {Fore.BLUE}{cmd_val}{Style.RESET_ALL}")
     
+# help - метод, выводящий все числа и операторы которые у нас есть
 def help():
+    """
+    выводит в констоль все числа и операции приложения
+    """
+    # выводим все допустимые числа
     print(f"\n{Back.MAGENTA}ДОПУСТИМЫЕ ЧИСЛА{Style.RESET_ALL}\n")
     for number in parsed_numbers.keys():
         print(number)
-    print(f"\n{Back.MAGENTA}ДОПУСТИМЫЕ ОПЕРАЦИИ{Style.RESET_ALL}\n")
+
+    # выводим все допустимые операции
+    print(f"\n{Back.MAGENTA}ДОПУСТИМЫЕ ОПЕРАТОРЫ{Style.RESET_ALL}\n")
     for operation in parsed_operators.keys():
         print(operation)
 
+# создаем свою ошибку NoOperatorsError
+# на случай если пользователь не ввёл ни одного оператора (нет смысла в выражении)
+# например:
+# два 
 class NoOperatorsError(Exception):
     pass
 
+# приветсвенное сообщение
 print(
 f'''Здравствуйте!
 Вы используете тестовый калькулятор {Fore.GREEN}GCalc (Glebocrew Pakostin Corporation){Style.RESET_ALL}
@@ -131,59 +410,97 @@ f'''Здравствуйте!
 Если вы хотите ознакомиться с допустимыми числами и операторами напишите команду /help'''
 )
 
+# сообщения для ошибок
 ERROR_MSG = f"\n{Fore.RED}{Back.LIGHTYELLOW_EX}Runtime Error:{Style.RESET_ALL}{Fore.RED}  Что-то пошло не так. Скорее всего вы ввели такое число, которое интерпретатор не позволяет посчитать из за большого размера.{Style.RESET_ALL}"
 USER_ERROR_MSG = f"{Fore.RED}{Back.LIGHTYELLOW_EX}User Query Error:{Style.RESET_ALL}{Fore.RED}  К сожалению, вы ввели неправильный формат входных данных. Попробуйте ещё раз. Чтобы ознакомится с допустимыми значениями ввода напишите {Fore.MAGENTA}/help{Style.RESET_ALL}"
 ZERO_DIVISION_MSG = f"\n{Fore.RED}{Back.LIGHTYELLOW_EX}User Query Math Error:{Style.RESET_ALL}{Fore.RED} К сожалению, эта программа не может исполнить операцию деления на нуль.{Style.RESET_ALL }"
 NOT_FULL_QUERY_MSG = f"\n{Fore.RED}{Back.LIGHTYELLOW_EX}User Query Not Fullness Error:{Style.RESET_ALL}{Fore.RED} К сожалению, ваш ввод был не полным, перепишите пожалуйста вашу команду{Style.RESET_ALL }"
 NO_OPERATORS_QUERY = f"{Fore.RED}{Back.LIGHTYELLOW_EX}User Query Incorrectness Error:{Style.RESET_ALL}{Fore.RED} К сожалению, в вашем вводе не содержится ни одного оператора. Чтобы ознакомиться с допустимыми операторами напишите {Fore.MAGENTA}/help{Style.RESET_ALL }"
 
-
+# метод для того, чтобы обработать конкретный запрос пользователя
 def polling():
+    """
+    метод для того, чтобы обработать конкретный запрос пользователя
+    """
+    # все данные функции описаны выше
 
     sliced = slice_string(user_input)
+
+    # эти функции для отладки. разкомментировать по мере непредвиденной программой ошибке
     # print(*sliced)
+
     numirised = numirise(sliced)
+
     # print(*numirised)
     # print(numirised)
+
+    # обрабатываем все возможные ошибки 
     try:
+        # "реализуем"  "нумеризованное"
         realised = realise(numirised)
+        # инициализируем переменную query, которая будет позже являться исполняемым кодом
         query = ""
+        # из "реализованного" к query добавляем по элементу
         for element_of_str in realised:
             query += str(element_of_str)
 
+        # перебираем все python-трактовки операторов 
         for oper in parsed_operators.values():
+            # если мы смогли найти в финальной версии query хоть один, то прерываем цикл
+            # => исполняется код *
             if query.find(oper) != -1:
                 break
+        # если цикл дошел до конца => нет ни одного оператора => создаем ошибку
         else:
             raise NoOperatorsError
         
+        # *
         print(*realised, "=", end=" ")
         exec(f"print({query})")
 
+    # если пользователь ввёл неправильный оператор / число
     except NameError:
         print(USER_ERROR_MSG)
     except TypeError:
         print(USER_ERROR_MSG)
+
+    # если пользователь ввёл числа, на которые не хватает мощностей
     except RuntimeError:
         print(ERROR_MSG)
     except ValueError:
         print(ERROR_MSG)
+
+    # если пользователь поделил на нуль (Ф.Достоевский - Идиот)
     except ZeroDivisionError:
         print(ZERO_DIVISION_MSG)
+
+    # если пользователь "недоввёл" что то
+    # например
+    # два делить
     except SyntaxError:
         print(NOT_FULL_QUERY_MSG)
+
+    # если пользователь не ввёл ни одного итератора
     except NoOperatorsError:
         print(NO_OPERATORS_QUERY)
 
+# 
 def command_handler():
+    """
+    исполняем команду
+    """
     exec(commands_dictionary_actions[user_input.lower()])
 
-
+# зацикливаем ввод
 loop = True
 while loop:
+    # ввод данных в консоль
     user_input = input(f">>>{Fore.LIGHTCYAN_EX}").lower()
+    # чистим стили
     print(f"{Style.RESET_ALL}", end="")
+    # если это команда, то исполняем ее
     if user_input.lower() in commands:
         command_handler()
+    # если это ввод - исполняем ввод
     else:
         polling()
