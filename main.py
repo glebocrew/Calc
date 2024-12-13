@@ -123,8 +123,30 @@ f'''Здравствуйте!
 Если вы хотите ознакомиться с допустимыми числами и операторами напишите команду /help'''
 )
 
-ERROR_MSG = f"{Fore.RED}{Back.LIGHTYELLOW_EX}Runtime Error: {Style.RESET_ALL}{Fore.RED}Что-то пошло не так. Скорее всего вы ввели такое число, которое интерпретатор не позволяет посчитать из за большого размера.{Style.RESET_ALL}"
-USER_ERROR_MSG = f"{Fore.RED}{Back.LIGHTYELLOW_EX}User Query Error: {Style.RESET_ALL}{Fore.RED}К сожалению, вы ввели неправильный формат входных данных. Попробуйте ещё раз. Чтобы ознакомится с допустимыми значениями ввода напишите {Fore.MAGENTA}/help{Style.RESET_ALL}"
+ERROR_MSG = f"\n{Fore.RED}{Back.LIGHTYELLOW_EX}Runtime Error: {Style.RESET_ALL}{Fore.RED}Что-то пошло не так. Скорее всего вы ввели такое число, которое интерпретатор не позволяет посчитать из за большого размера.{Style.RESET_ALL}"
+USER_ERROR_MSG = f"\n{Fore.RED}{Back.LIGHTYELLOW_EX}User Query Error: {Style.RESET_ALL}{Fore.RED}К сожалению, вы ввели неправильный формат входных данных. Попробуйте ещё раз. Чтобы ознакомится с допустимыми значениями ввода напишите {Fore.MAGENTA}/help{Style.RESET_ALL}"
+
+def polling():
+    sliced = slice_string(user_input)
+    # print(*sliced)
+    numirised = numirise(sliced)
+    # print(*numirised)
+    # print(numirised)
+    try:
+        realised = realise(numirised)
+        print(*realised, "=", end=" ")
+        query = ""
+        for element_of_str in realised:
+            query += str(element_of_str)                
+        exec(f"print({query})")
+    except NameError:
+        print(USER_ERROR_MSG)
+    except TypeError:
+        print(USER_ERROR_MSG)
+    except RuntimeError:
+        print(ERROR_MSG)
+    except ValueError:
+        print(ERROR_MSG)
 
 loop = True
 while loop:
@@ -133,23 +155,4 @@ while loop:
     if user_input.lower() in commands:
         exec(commands_dictionary_actions[user_input.lower()])
     else:
-
-        sliced = slice_string(user_input)
-        # print(*sliced)
-        numirised = numirise(sliced)
-        # print(*numirised)
-        # print(numirised)
-
-        try:
-            realised = realise(numirised)
-            print(*realised, "=", end=" ")
-            query = ""
-            for element_of_str in realised:
-                query += str(element_of_str)                
-            exec(f"print({query})")
-        except NameError:
-            print(USER_ERROR_MSG)
-        except TypeError:
-            print(USER_ERROR_MSG)
-        except RuntimeError:
-            print(ERROR_MSG)
+        polling()
