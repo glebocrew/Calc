@@ -38,14 +38,18 @@ def numirise(nums_list:list):
     # print(nums_list)
 
     for big_number in range(0, len(nums_list)):
-        if nums_list[big_number][0] not in parsed_operators.keys():
-            for small_number in range(0, len(nums_list[big_number])):
-                for number in parsed_numbers.keys():
-                    if nums_list[big_number][small_number].find(number) != -1 and abs(len(nums_list[big_number][small_number]) - len(number)) <= 2 and number[0] == nums_list[big_number][small_number][0]:
-                        nums_list[big_number][small_number] = parsed_numbers[number]
-                        break
-        else:
-            nums_list[big_number] = [parsed_operators[nums_list[big_number][0]]]
+        try:
+            if nums_list[big_number][0] not in parsed_operators.keys():
+                for small_number in range(0, len(nums_list[big_number])):
+                    for number in parsed_numbers.keys():
+                        if nums_list[big_number][small_number].find(number) != -1 and abs(len(nums_list[big_number][small_number]) - len(number)) <= 2 and number[0] == nums_list[big_number][small_number][0]:
+                            nums_list[big_number][small_number] = parsed_numbers[number]
+                            break
+
+            else:
+                nums_list[big_number] = [parsed_operators[nums_list[big_number][0]]]
+        except IndexError:
+            nums_list[big_number] = [""]
 
     return nums_list
 
@@ -72,7 +76,8 @@ def realise(numbers_list:list):
                 return real_num + number[max_id+1]
 
         except:
-            return real_num        
+            return real_num     
+        
     for big_number in numbers_list:
         if big_number[0] in parsed_operators:
             outlist.append(big_number[0])
@@ -115,6 +120,9 @@ def help():
     for operation in parsed_operators.keys():
         print(operation)
 
+class NoOperatorsError(Exception):
+    pass
+
 print(
 f'''Здравствуйте!
 Вы используете тестовый калькулятор {Fore.GREEN}GCalc (Glebocrew Pakostin Corporation){Style.RESET_ALL}
@@ -123,10 +131,15 @@ f'''Здравствуйте!
 Если вы хотите ознакомиться с допустимыми числами и операторами напишите команду /help'''
 )
 
-ERROR_MSG = f"\n{Fore.RED}{Back.LIGHTYELLOW_EX}Runtime Error: {Style.RESET_ALL}{Fore.RED}Что-то пошло не так. Скорее всего вы ввели такое число, которое интерпретатор не позволяет посчитать из за большого размера.{Style.RESET_ALL}"
-USER_ERROR_MSG = f"\n{Fore.RED}{Back.LIGHTYELLOW_EX}User Query Error: {Style.RESET_ALL}{Fore.RED}К сожалению, вы ввели неправильный формат входных данных. Попробуйте ещё раз. Чтобы ознакомится с допустимыми значениями ввода напишите {Fore.MAGENTA}/help{Style.RESET_ALL}"
+ERROR_MSG = f"\n{Fore.RED}{Back.LIGHTYELLOW_EX}Runtime Error:{Style.RESET_ALL}{Fore.RED}  Что-то пошло не так. Скорее всего вы ввели такое число, которое интерпретатор не позволяет посчитать из за большого размера.{Style.RESET_ALL}"
+USER_ERROR_MSG = f"{Fore.RED}{Back.LIGHTYELLOW_EX}User Query Error:{Style.RESET_ALL}{Fore.RED}  К сожалению, вы ввели неправильный формат входных данных. Попробуйте ещё раз. Чтобы ознакомится с допустимыми значениями ввода напишите {Fore.MAGENTA}/help{Style.RESET_ALL}"
+ZERO_DIVISION_MSG = f"\n{Fore.RED}{Back.LIGHTYELLOW_EX}User Query Math Error:{Style.RESET_ALL}{Fore.RED} К сожалению, эта программа не может исполнить операцию деления на нуль.{Style.RESET_ALL }"
+NOT_FULL_QUERY_MSG = f"\n{Fore.RED}{Back.LIGHTYELLOW_EX}User Query Not Fullness Error:{Style.RESET_ALL}{Fore.RED} К сожалению, ваш ввод был не полным, перепишите пожалуйста вашу команду{Style.RESET_ALL }"
+NO_OPERATORS_QUERY = f"{Fore.RED}{Back.LIGHTYELLOW_EX}User Query Incorrectness Error:{Style.RESET_ALL}{Fore.RED} К сожалению, в вашем вводе не содержится ни одного оператора. Чтобы ознакомиться с допустимыми операторами напишите {Fore.MAGENTA}/help{Style.RESET_ALL }"
+
 
 def polling():
+
     sliced = slice_string(user_input)
     # print(*sliced)
     numirised = numirise(sliced)
@@ -134,11 +147,19 @@ def polling():
     # print(numirised)
     try:
         realised = realise(numirised)
-        print(*realised, "=", end=" ")
         query = ""
         for element_of_str in realised:
-            query += str(element_of_str)                
+            query += str(element_of_str)
+
+        for oper in parsed_operators.values():
+            if query.find(oper) != -1:
+                break
+        else:
+            raise NoOperatorsError
+        
+        print(*realised, "=", end=" ")
         exec(f"print({query})")
+
     except NameError:
         print(USER_ERROR_MSG)
     except TypeError:
@@ -147,12 +168,22 @@ def polling():
         print(ERROR_MSG)
     except ValueError:
         print(ERROR_MSG)
+    except ZeroDivisionError:
+        print(ZERO_DIVISION_MSG)
+    except SyntaxError:
+        print(NOT_FULL_QUERY_MSG)
+    except NoOperatorsError:
+        print(NO_OPERATORS_QUERY)
+
+def command_handler():
+    exec(commands_dictionary_actions[user_input.lower()])
+
 
 loop = True
 while loop:
-    user_input = input(f">>>{Fore.LIGHTCYAN_EX}")
+    user_input = input(f">>>{Fore.LIGHTCYAN_EX}").lower()
     print(f"{Style.RESET_ALL}", end="")
     if user_input.lower() in commands:
-        exec(commands_dictionary_actions[user_input.lower()])
+        command_handler()
     else:
         polling()
